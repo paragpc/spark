@@ -227,6 +227,12 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
         context.reply(true)
 
       case RetrieveSparkAppConfig =>
+        val sparkProperties = new ArrayBuffer[(String, String)]
+        for ((key, value) <- scheduler.sc.conf.getAll) {
+          if (key.startsWith("spark.")) {
+            sparkProperties += ((key, value))
+          }
+        }
         val reply = SparkAppConfig(
           sparkProperties,
           SparkEnv.get.securityManager.getIOEncryptionKey(),
