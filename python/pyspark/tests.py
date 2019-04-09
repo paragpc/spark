@@ -518,6 +518,120 @@ class AddFileTests(PySparkTestCase):
 
         self.assertEqual(["My Server"], self.sc.parallelize(range(1)).map(func).collect())
 
+class CustomPythonPackageInstallationTests(PySparkTestCase):
+
+    def _set_virtualenv_path(self):
+        # Dynamically get virtualenv path
+        import subprocess
+        import shlex
+        command = "which virtualenv"
+        process = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        virtualenvBinPath = process.stdout.readline()
+        self.sc._conf.set("spark.pyspark.virtualenv.bin.path", virtualenvBinPath)
+
+    def test_install_pypi_package_without_enabling_virtualenv(self):
+        self.sc._conf.set("spark.pyspark.virtualenv.enabled", "false")
+        self.sc._conf.set("spark.pyspark.virtualenv.type", "native")
+        self.sc._conf.set("spark.pyspark.python", "python")
+
+        def call_install_pypi_package():
+            self.sc.install_pypi_package("celery")
+        self.assertRaises(RuntimeError, call_install_pypi_package)
+
+    def test_install_pypi_package_for_invalid_input(self):
+        self.sc._conf.set("spark.pyspark.virtualenv.enabled", "true")
+        self.sc._conf.set("spark.pyspark.virtualenv.type", "native")
+        self.sc._conf.set("spark.pyspark.python", "python")
+
+        def call_install_pypi_package():
+            self.sc.install_pypi_package(["celery"])
+        self.assertRaises(ValueError, call_install_pypi_package)
+
+    def test_install_pypi_package_locally(self):
+        self.sc._conf.set("spark.pyspark.virtualenv.enabled", "true")
+        self.sc._conf.set("spark.pyspark.virtualenv.type", "native")
+        self._set_virtualenv_path()
+        self.sc._conf.set("spark.pyspark.python", "python")
+
+        def test_local():
+            import celery
+            return True
+        self.assertRaises(ImportError, test_local)
+        self.sc.install_pypi_package("celery")
+        self.assertTrue(test_local)
+        self.assertEqual("celery", self.sc._conf.get("spark.pyspark.virtualenv.packages"))
+        self.sc.uninstall_package("celery")
+
+    def test_install_pypi_package_remotely(self):
+        self.sc._conf.set("spark.pyspark.virtualenv.enabled", "true")
+        self.sc._conf.set("spark.pyspark.virtualenv.type", "native")
+        self._set_virtualenv_path()
+        self.sc._conf.set("spark.pyspark.python", "python")
+
+        def test_remote(x):
+            import celery
+            return celery.__version__
+        with QuietTest(self.sc):
+            self.assertRaises(Exception, self.sc.parallelize(range(2)).map(test_remote).first)
+
+        self.sc.install_pypi_package("celery")
+        res = self.sc.range(2).map(test_remote).first
+        self.assertIsNotNone(res)
+        self.assertEqual("celery", self.sc._conf.get("spark.pyspark.virtualenv.packages"))
+        self.sc.uninstall_package("celery")
+
+    def test_uninstall_package_without_enabling_virtualenv(self):
+        self.sc._conf.set("spark.pyspark.virtualenv.enabled", "false")
+        self.sc._conf.set("spark.pyspark.virtualenv.type", "native")
+        self.sc._conf.set("spark.pyspark.python", "python")
+
+        def call_uninstall_package():
+            self.sc.uninstall_package("celery")
+        self.assertRaises(RuntimeError, call_uninstall_package)
+
+    def test_uninstall_package_for_invalid_input(self):
+        self.sc._conf.set("spark.pyspark.virtualenv.enabled", "true")
+        self.sc._conf.set("spark.pyspark.virtualenv.type", "native")
+        self.sc._conf.set("spark.pyspark.python", "python")
+
+        def call_uninstall_package():
+            self.sc.uninstall_package(["celery"])
+        self.assertRaises(ValueError, call_uninstall_package)
+
+    def test_uninstall_package(self):
+        self.sc._conf.set("spark.pyspark.virtualenv.enabled", "true")
+        self.sc._conf.set("spark.pyspark.virtualenv.type", "native")
+        self._set_virtualenv_path()
+        self.sc._conf.set("spark.pyspark.python", "python")
+
+        def test_uninstall():
+            import celery
+            return True
+        self.sc.install_pypi_package("celery")
+        self.assertTrue(test_uninstall())
+        self.assertEqual("celery", self.sc._conf.get("spark.pyspark.virtualenv.packages"))
+        self.sc.uninstall_package("celery")
+        self.assertEqual("", self.sc._conf.get("spark.pyspark.virtualenv.packages"))
+
+    def test_list_packages_without_enabling_virtualenv(self):
+        self.sc._conf.set("spark.pyspark.virtualenv.enabled", "false")
+        self.sc._conf.set("spark.pyspark.virtualenv.type", "native")
+        self.sc._conf.set("spark.pyspark.python", "python")
+
+        def call_list_packages():
+            self.sc.list_packages()
+        self.assertRaises(RuntimeError, call_list_packages)
+
+    def test_list_packages(self):
+        self.sc._conf.set("spark.pyspark.virtualenv.enabled", "true")
+        self.sc._conf.set("spark.pyspark.virtualenv.type", "native")
+        self._set_virtualenv_path()
+        self.sc._conf.set("spark.pyspark.python", "python")
+        try:
+            self.sc.list_packages()
+        except type:
+            self.fail("test_list_packages raised: " + type)
+
 
 class TaskContextTests(PySparkTestCase):
 

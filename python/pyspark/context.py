@@ -213,6 +213,14 @@ class SparkContext(object):
         self._encryption_enabled = self._jvm.PythonUtils.getEncryptionEnabled(self._jsc)
 
         self.pythonExec = os.environ.get("PYSPARK_PYTHON", 'python')
+        if self._conf.get("spark.pyspark.virtualenv.enabled") == "true":
+            self.pythonExec = self._conf.get("spark.pyspark.python", self.pythonExec)
+            virtualEnvBinPath = self._conf.get("spark.pyspark.virtualenv.bin.path")
+
+            if virtualEnvBinPath is None:
+                raise Exception("spark.pyspark.virtualenv.enabled is set as true but no value for "
+                                "spark.pyspark.virtualenv.bin.path")
+
         self.pythonVer = "%d.%d" % sys.version_info[:2]
 
         # Broadcast's __reduce__ method stores Broadcast instances here.
@@ -1090,6 +1098,94 @@ class SparkContext(object):
         conf = SparkConf()
         conf.setAll(self._conf.getAll())
         return conf
+
+    def install_pypi_package(self, pypi_package):
+        """
+        Install python packages on all executors and driver
+        :param pypi_package: pypi package name
+        """
+        import functools
+        import six
+        if self._conf.get("spark.pyspark.virtualenv.enabled") != "true":
+            raise RuntimeError("install_pypi_packages can only use called when "
+                               "spark.pyspark.virtualenv.enabled is set to true")
+        if not isinstance(pypi_package, six.string_types):
+            raise ValueError("Invalid package name: Package name must be a string")
+        pypi_package = pypi_package.strip()
+
+        def _run_pip(pypi_package, iterator):
+            import sys
+            from pyspark.util import CommandUtils
+            return CommandUtils.run_command(sys.executable + " -m pip install " + pypi_package)
+
+        # install package on driver first. if installation succeeded, continue the installation
+        # on executors, otherwise return directly.
+        if _run_pip(pypi_package, None) != 0:
+            return
+
+        virtualenvPackages = self._conf.get("spark.pyspark.virtualenv.packages")
+        if virtualenvPackages:
+            self._conf.set("spark.pyspark.virtualenv.packages", virtualenvPackages + ":" + pypi_package)
+        else:
+            self._conf.set("spark.pyspark.virtualenv.packages", pypi_package)
+
+        # statusTracker.getExecutorInfos() will return driver + executors, so -1 here.
+        num_executors = len(self._jsc.sc().statusTracker().getExecutorInfos()) - 1
+        if num_executors > 0:
+            dummyRDD = self.parallelize(range(num_executors), num_executors)
+            dummyRDD.foreachPartition(functools.partial(_run_pip, pypi_package))
+
+    def uninstall_package(self, package):
+        """
+        Uninstall python packages on all executors and driver
+        :param package: package name
+        """
+        import functools
+        import six
+        if self._conf.get("spark.pyspark.virtualenv.enabled") != "true":
+            raise RuntimeError("uninstall_package can only use called when "
+                               "spark.pyspark.virtualenv.enabled is set to true")
+        if not isinstance(package, six.string_types):
+            raise ValueError("Invalid package name: Package name must be a string")
+        package = package.strip()
+
+        def _run_pip(package, iterator):
+            import sys
+            from pyspark.util import CommandUtils
+            return CommandUtils.run_command(sys.executable + " -m pip uninstall -y " + package)
+
+        # install package on driver first. if uninstall is succeeded, continue to uninstall
+        # on executors, otherwise return directly.
+        if _run_pip(package, None) != 0:
+            return
+
+        virtualenvPackages = self._conf.get("spark.pyspark.virtualenv.packages")
+        if virtualenvPackages:
+            result_pkgs = []
+            pkgs = virtualenvPackages.replace(" ", "").split(":")
+            for cur_pkg in pkgs:
+                if cur_pkg:
+                    if cur_pkg != package:
+                        result_pkgs.append(cur_pkg)
+            self._conf.set("spark.pyspark.virtualenv.packages", ":".join(result_pkgs))
+
+        # statusTracker.getExecutorInfos() will return driver + executors, so -1 here.
+        num_executors = len(self._jsc.sc().statusTracker().getExecutorInfos()) - 1
+        if num_executors > 0:
+            dummyRDD = self.parallelize(range(num_executors), num_executors)
+            dummyRDD.foreachPartition(functools.partial(_run_pip, package))
+
+    def list_packages(self):
+        """
+        List python packages on driver
+        """
+        if self._conf.get("spark.pyspark.virtualenv.enabled") != "true":
+            raise RuntimeError("list_packages can only use called when "
+                           "spark.pyspark.virtualenv.enabled is set to true")
+
+
+        from pyspark.util import CommandUtils
+        CommandUtils.run_command(sys.executable + " -m pip list")
 
 
 def _test():

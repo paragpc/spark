@@ -218,6 +218,71 @@ These commands can be used with `pyspark`, `spark-shell`, and `spark-submit` to 
 For Python, the equivalent `--py-files` option can be used to distribute `.egg`, `.zip` and `.py` libraries
 to executors.
 
+# VirtualEnv for PySpark
+For simple PySpark application, we can use `--py-files` to add its dependencies. While for a large PySpark application, usually you will have many dependencies which may also have transitive dependencies and even some dependencies need to be compiled first to be installed. In this case `--py-files` is not so convenient. In python world we have virtualenv to help create isolated python work environment. Spark supports virtualenv in PySpark (It is only supported for yarn and client mode for now). User can use this feature
+in 2 scenarios:
+- Interactive mode (PySpark shell or other third party Spark Notebook)
+- Batch mode (submit spark app via spark-submit)
+
+
+## Prerequisites
+- Each node has virtualenv, python-devel installed
+- Each node has access to the repository of python packages (for downloading packages). e.g. if user wants to to install from public PyPI
+  then each node should have access to internet. 
+
+
+## Interactive Mode
+In interactive mode，user can install python packages at runtime instead of specifying them in while submitting spark app.
+
+{% highlight python %}
+sc.install_pypi_package("numpy")
+sc.uninstall_package("numpy")
+sc.list_packages()
+sc.install_pypi_package("numpy=1.16.4")
+{% endhighlight %}
+
+## Batch Mode
+In batch mode, user can specify packages via spark configuration `spark.pyspark.virtualenv.packages`.
+
+{% highlight bash %}
+### Setup virtualenv on yarn-client mode
+bin/spark-submit \
+    --master yarn \
+    --deploy-mode client \
+    --conf "spark.pyspark.virtualenv.enabled=true" \
+    --conf "spark.pyspark.virtualenv.type=native" \
+    --conf "spark.pyspark.virtualenv.bin.path=<virtualenv_bin_path>" \
+    --conf "spark.pyspark.virtualenv.packages=numpy:pandas" \
+    <pyspark_script>
+{% endhighlight %}
+
+
+## PySpark VirtualEnv Configurations
+<table class="table">
+<tr><th>Property Name</th><th>Default</th><th>Meaning</th></tr>
+<tr>
+  <td><code>spark.pyspark.virtualenv.enabled</code></td>
+  <td>false</td>
+  <td>Whether to enable virtualenv. If disbaled global system python env is used.</td>
+</tr>
+<tr>
+  <td><code>spark.pyspark.virtualenv.type</code></td>
+  <td>native</td>
+  <td>Currently only native virtualenv type is supported.</td>
+</tr>
+<tr>
+  <td><code>spark.pyspark.virtualenv.bin.path</code></td>
+  <td>/usr/bin/virtualenv</td>
+  <td>Path for virtualenv executable file in the cluster. It requires that the virtualenv binary is installed in the same location across the cluster.</td>
+</tr>
+<tr>
+  <td><code>spark.pyspark.virtualenv.packages</code></td>
+  <td>(none)</td>
+  <td>Additional python packages need to be installed when creating virtualenv runtime./td>
+</tr>
+</table>
+
+
 # More Information
 
 Once you have deployed your application, the [cluster mode overview](cluster-overview.html) describes
