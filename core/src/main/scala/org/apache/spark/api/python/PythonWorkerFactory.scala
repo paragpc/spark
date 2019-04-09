@@ -30,8 +30,11 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.security.SocketAuthHelper
 import org.apache.spark.util.{RedirectThread, Utils}
 
-private[spark] class PythonWorkerFactory(pythonExec: String, envVars: Map[String, String])
-  extends Logging {
+private[spark] class PythonWorkerFactory(
+    globalPythonExec: String,
+    envVars: Map[String, String],
+    conf: SparkConf)
+  extends Logging { self =>
 
   import PythonWorkerFactory._
 
@@ -76,6 +79,14 @@ private[spark] class PythonWorkerFactory(pythonExec: String, envVars: Map[String
   val daemonWorkers = new mutable.WeakHashMap[Socket, Int]()
   val idleWorkers = new mutable.Queue[Socket]()
   var lastActivity = 0L
+  val virtualEnvEnabled = conf.getBoolean("spark.pyspark.virtualenv.enabled", false)
+  val pythonExec = if (virtualEnvEnabled) {
+    val virtualEnvFactory = new VirtualEnvFactory(globalPythonExec, conf, false, false)
+    virtualEnvFactory.setupVirtualEnv()
+  } else {
+    globalPythonExec
+  }
+
   new MonitorThread().start()
 
   var simpleWorkers = new mutable.WeakHashMap[Socket, Process]()

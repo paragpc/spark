@@ -15,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import print_function
 
 import re
 import sys
@@ -88,6 +89,19 @@ class VersionUtils(object):
                              " version string, but it could not find the major and minor" +
                              " version numbers.")
 
+class CommandUtils(object):
+    """
+    Provides utility method to run any command
+    """
+    @staticmethod
+    def run_command(command):
+        import subprocess
+        import shlex
+        process = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        stdout, stderr = process.communicate()
+        print(stdout)
+        print(stderr, file=sys.stderr)
+        return process.returncode
 
 def fail_on_stopiteration(f):
     """
