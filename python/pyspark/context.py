@@ -124,7 +124,7 @@ class SparkContext(object):
                     "You are passing in an insecure Py4j gateway.  This "
                     "presents a security risk, and will be completely forbidden in Spark 3.0")
             else:
-                raise ValueError(
+                warnings.warn(
                     "You are trying to pass an insecure Py4j gateway to Spark. This"
                     " presents a security risk.  If you are sure you understand and accept this"
                     " risk, you can set the environment variable"
@@ -1109,18 +1109,34 @@ class SparkContext(object):
         :param packages: string for single package or a list of string for multiple packages
         """
         import functools
+        import subprocess
+        import sys
+        import shlex
         if self._conf.get("spark.pyspark.virtualenv.enabled") != "true":
             raise RuntimeError("install_packages can only use called when "
                                "spark.pyspark.virtualenv.enabled is set as true")
-        if isinstance(packages, basestring):
-            packages = [packages]
-        # seems statusTracker.getExecutorInfos() will return driver + exeuctors, so -1 here.
-        num_executors = len(self._jsc.sc().statusTracker().getExecutorInfos()) - 1
-        dummyRDD = self.parallelize(range(num_executors), num_executors)
+        #if isinstance(packages, basestring):
+            # packages = [packages]
+
+
+        def run_command(command):
+            process = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE)
+            while True:
+                output = process.stdout.readline()
+                if output == '' and process.poll() is not None:
+                    break
+                if output:
+                    print(output)
+            rc = process.poll()
+            return rc
 
         def _run_pip(packages, iterator):
-            import pip
-            return pip.main(["install"] + packages)
+            #from pip._internal import main as _main
+            #return _main(["install"] + packages)
+            #import subprocess
+            #import sys
+            #return subprocess.call([sys.executable, "-m", "pip", "install", packages])
+            return run_command("python -m pip install " + packages)
 
         # install package on driver first. if installation succeeded, continue the installation
         # on executors, otherwise return directly.
@@ -1134,7 +1150,11 @@ class SparkContext(object):
         else:
             self._conf.set("spark.pyspark.virtualenv.packages", ":".join(packages))
 
-        dummyRDD.foreachPartition(functools.partial(_run_pip, packages))
+        # seems statusTracker.getExecutorInfos() will return driver + exeuctors, so -1 here.
+        num_executors = len(self._jsc.sc().statusTracker().getExecutorInfos()) - 1
+        if num_executors > 0:
+            dummyRDD = self.parallelize(range(num_executors), num_executors)
+            dummyRDD.foreachPartition(functools.partial(_run_pip, packages))
 
 
 def _test():
