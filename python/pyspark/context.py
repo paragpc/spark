@@ -221,6 +221,7 @@ class SparkContext(object):
             if virtualEnvBinPath is None:
                 raise Exception("spark.pyspark.virtualenv.enabled is set as true but no value for "
                                 "spark.pyspark.virtualenv.bin.path")
+
         self.pythonVer = "%d.%d" % sys.version_info[:2]
 
         # Broadcast's __reduce__ method stores Broadcast instances here.
@@ -1109,9 +1110,6 @@ class SparkContext(object):
         :param packages: string for single package or a list of string for multiple packages
         """
         import functools
-        import subprocess
-        import sys
-        import shlex
         if self._conf.get("spark.pyspark.virtualenv.enabled") != "true":
             raise RuntimeError("install_packages can only use called when "
                                "spark.pyspark.virtualenv.enabled is set as true")
@@ -1120,7 +1118,9 @@ class SparkContext(object):
 
 
         def run_command(command):
-            process = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE)
+            import subprocess
+            import shlex
+            process = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             while True:
                 output = process.stdout.readline()
                 if output == '' and process.poll() is not None:
@@ -1134,9 +1134,9 @@ class SparkContext(object):
             #from pip._internal import main as _main
             #return _main(["install"] + packages)
             #import subprocess
-            #import sys
+            import sys
             #return subprocess.call([sys.executable, "-m", "pip", "install", packages])
-            return run_command("python -m pip install " + packages)
+            return run_command(sys.executable + " -m pip install " + packages)
 
         # install package on driver first. if installation succeeded, continue the installation
         # on executors, otherwise return directly.
