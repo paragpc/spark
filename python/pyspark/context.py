@@ -1127,6 +1127,13 @@ class SparkContext(object):
                     break
                 if output:
                     print(output)
+
+            while True:
+                err = process.stderr.readline()
+                if err == '':
+                    break
+                if err:
+                    print(err)
             rc = process.poll()
             return rc
 
@@ -1145,10 +1152,9 @@ class SparkContext(object):
 
         virtualenvPackages = self._conf.get("spark.pyspark.virtualenv.packages")
         if virtualenvPackages:
-            self._conf.set("spark.pyspark.virtualenv.packages", virtualenvPackages + ":" +
-                           ":".join(packages))
+            self._conf.set("spark.pyspark.virtualenv.packages", virtualenvPackages + ":" + packages)
         else:
-            self._conf.set("spark.pyspark.virtualenv.packages", ":".join(packages))
+            self._conf.set("spark.pyspark.virtualenv.packages", packages)
 
         # seems statusTracker.getExecutorInfos() will return driver + exeuctors, so -1 here.
         num_executors = len(self._jsc.sc().statusTracker().getExecutorInfos()) - 1
