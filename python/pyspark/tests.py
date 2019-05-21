@@ -567,6 +567,22 @@ class InstallPackagesTests(PySparkTestCase):
         self.assertIsNotNone(res)
         self.sc.uninstall_packages("celery")
 
+    def test_list_packages(self):
+        self.sc._conf.set("spark.pyspark.virtualenv.enabled", "true")
+        self.sc._conf.set("spark.pyspark.virtualenv.type", "native")
+        # Dynamically get virtualenv path here
+        import subprocess
+        import shlex
+        command = "which virtualenv"
+        process = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        virtualenvBinPath = process.stdout.readline()
+        print(virtualenvBinPath)
+        self.sc._conf.set("spark.pyspark.virtualenv.bin.path", virtualenvBinPath)
+        self.sc._conf.set("spark.pyspark.python", "python")
+        print(self.sc.list_packages())
+        self.assertEqual(0, self.sc.list_packages())
+
+
 
 
 class TaskContextTests(PySparkTestCase):

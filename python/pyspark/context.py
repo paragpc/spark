@@ -1176,6 +1176,19 @@ class SparkContext(object):
             dummyRDD = self.parallelize(range(num_executors), num_executors)
             dummyRDD.foreachPartition(functools.partial(_run_pip, packages))
 
+    def list_packages(self):
+        """
+        List python packages on all driver through pip. pip will be installed
+        by default. So it is guaranteed that pip is available if virtualenv is enabled.
+        """
+        if self._conf.get("spark.pyspark.virtualenv.enabled") != "true":
+            raise RuntimeError("list_packages can only use called when "
+                           "spark.pyspark.virtualenv.enabled is set as true")
+
+
+        from pyspark.util import CommandUtils
+        return CommandUtils.run_command(sys.executable + " -m pip list")
+
 
 def _test():
     import atexit
