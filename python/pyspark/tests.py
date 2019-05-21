@@ -524,7 +524,13 @@ class InstallPackagesTests(PySparkTestCase):
         self.sc._conf.set("spark.pyspark.virtualenv.enabled", "true")
         self.sc._conf.set("spark.pyspark.virtualenv.type", "native")
         # Dynamically get virtualenv path here
-        self.sc._conf.set("spark.pyspark.virtualenv.bin.path", "/usr/local/bin/virtualenv")
+        import subprocess
+        import shlex
+        command = "which virtualenv"
+        process = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        virtualenvBinPath = process.stdout.readline()
+        print(virtualenvBinPath)
+        self.sc._conf.set("spark.pyspark.virtualenv.bin.path", virtualenvBinPath)
         self.sc._conf.set("spark.pyspark.python", "python")
 
         def test_local():
@@ -541,7 +547,13 @@ class InstallPackagesTests(PySparkTestCase):
         self.sc._conf.set("spark.pyspark.virtualenv.enabled", "true")
         self.sc._conf.set("spark.pyspark.virtualenv.type", "native")
         # Dynamically get virtualenv path here
-        self.sc._conf.set("spark.pyspark.virtualenv.bin.path", "/usr/local/bin/virtualenv")
+        import subprocess
+        import shlex
+        command = "which virtualenv"
+        process = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        virtualenvBinPath = process.stdout.readline()
+        print(virtualenvBinPath)
+        self.sc._conf.set("spark.pyspark.virtualenv.bin.path", virtualenvBinPath)
         self.sc._conf.set("spark.pyspark.python", "python")
 
         def test_remote(x):
