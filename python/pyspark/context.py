@@ -1103,10 +1103,7 @@ class SparkContext(object):
     def install_packages(self, packages):
         """
         Install python packages on all executors and driver through pip. pip will be installed
-        by default no matter using native virtualenv or conda. So it is guaranteed that pip is
-        available if virtualenv is enabled.
-        .. note:: Experimental
-        .. versionadded:: 2.4
+        by default. So it is guaranteed that pip is available if virtualenv is enabled.
         :param packages: string for single package or a list of string for multiple packages
         """
         import functools
@@ -1116,29 +1113,10 @@ class SparkContext(object):
         #if isinstance(packages, basestring):
             # packages = [packages]
 
-        def run_command(command):
-            import subprocess
-            import shlex
-            process = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            while True:
-                output = process.stdout.readline()
-                if output == '' and process.poll() is not None:
-                    break
-                if output:
-                    print(output)
-
-            while True:
-                err = process.stderr.readline()
-                if err == '':
-                    break
-                if err:
-                    print(err)
-            rc = process.poll()
-            return rc
-
         def _run_pip(packages, iterator):
             import sys
-            return run_command(sys.executable + " -m pip install " + packages)
+            from pyspark.util import CommandUtils
+            return CommandUtils.run_command(sys.executable + " -m pip install " + packages)
 
         # install package on driver first. if installation succeeded, continue the installation
         # on executors, otherwise return directly.
@@ -1151,7 +1129,7 @@ class SparkContext(object):
         else:
             self._conf.set("spark.pyspark.virtualenv.packages", packages)
 
-        # seems statusTracker.getExecutorInfos() will return driver + exeuctors, so -1 here.
+        # statusTracker.getExecutorInfos() will return driver + exeuctors, so -1 here.
         num_executors = len(self._jsc.sc().statusTracker().getExecutorInfos()) - 1
         if num_executors > 0:
             dummyRDD = self.parallelize(range(num_executors), num_executors)
@@ -1160,10 +1138,7 @@ class SparkContext(object):
     def uninstall_packages(self, packages):
         """
         Uninstall python packages on all executors and driver through pip. pip will be installed
-        by default no matter using native virtualenv or conda. So it is guaranteed that pip is
-        available if virtualenv is enabled.
-        .. note:: Experimental
-        .. versionadded:: 2.4
+        by default. So it is guaranteed that pip is available if virtualenv is enabled.
         :param packages: string for single package or a list of string for multiple packages
         """
         import functools
@@ -1173,31 +1148,12 @@ class SparkContext(object):
         #if isinstance(packages, basestring):
         # packages = [packages]
 
-        def run_command(command):
-            import subprocess
-            import shlex
-            process = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            while True:
-                output = process.stdout.readline()
-                if output == '' and process.poll() is not None:
-                    break
-                if output:
-                    print(output)
-
-            while True:
-                err = process.stderr.readline()
-                if err == '':
-                    break
-                if err:
-                    print(err)
-            rc = process.poll()
-            return rc
-
         def _run_pip(packages, iterator):
             import sys
-            return run_command(sys.executable + " -m pip uninstall -y " + packages)
+            from pyspark.util import CommandUtils
+            return CommandUtils.run_command(sys.executable + " -m pip uninstall -y " + packages)
 
-        # install package on driver first. if installation succeeded, continue the installation
+        # install package on driver first. if uninstall is succeeded, continue to uninstall
         # on executors, otherwise return directly.
         if _run_pip(packages, None) != 0:
             return
@@ -1214,7 +1170,7 @@ class SparkContext(object):
                         result_pkgs = result_pkgs + ":" + curPkg
             self._conf.set("spark.pyspark.virtualenv.packages", "")
 
-        # seems statusTracker.getExecutorInfos() will return driver + exeuctors, so -1 here.
+        # statusTracker.getExecutorInfos() will return driver + exeuctors, so -1 here.
         num_executors = len(self._jsc.sc().statusTracker().getExecutorInfos()) - 1
         if num_executors > 0:
             dummyRDD = self.parallelize(range(num_executors), num_executors)

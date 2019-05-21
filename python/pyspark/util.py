@@ -88,6 +88,30 @@ class VersionUtils(object):
                              " version string, but it could not find the major and minor" +
                              " version numbers.")
 
+class CommandUtils(object):
+    """
+    Provides utility method to run any command
+    """
+    @staticmethod
+    def run_command(command):
+        import subprocess
+        import shlex
+        process = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        while True:
+            output = process.stdout.readline()
+            if output == '' and process.poll() is not None:
+                break
+            if output:
+                print(output)
+
+        while True:
+            err = process.stderr.readline()
+            if err == '':
+                break
+            if err:
+                print(err)
+        rc = process.poll()
+        return rc
 
 def fail_on_stopiteration(f):
     """
