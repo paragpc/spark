@@ -518,6 +518,44 @@ class AddFileTests(PySparkTestCase):
 
         self.assertEqual(["My Server"], self.sc.parallelize(range(1)).map(func).collect())
 
+class InstallPackagesTests(PySparkTestCase):
+
+    def test_install_packages_locally(self):
+        self.sc._conf.set("spark.pyspark.virtualenv.enabled", "true")
+        self.sc._conf.set("spark.pyspark.virtualenv.type", "native")
+        # Dynamically get virtualenv path here
+        self.sc._conf.set("spark.pyspark.virtualenv.bin.path", "/usr/local/bin/virtualenv")
+        self.sc._conf.set("spark.pyspark.python", "python")
+
+        def test_local():
+            import celery
+            return True
+        self.assertRaises(ImportError, test_local)
+
+
+        self.sc.install_packages("celery")
+        self.assertTrue(test_local)
+        self.sc.uninstall_packages("celery")
+
+    def test_install_packages_remotely(self):
+        self.sc._conf.set("spark.pyspark.virtualenv.enabled", "true")
+        self.sc._conf.set("spark.pyspark.virtualenv.type", "native")
+        # Dynamically get virtualenv path here
+        self.sc._conf.set("spark.pyspark.virtualenv.bin.path", "/usr/local/bin/virtualenv")
+        self.sc._conf.set("spark.pyspark.python", "python")
+
+        def test_remote(x):
+            import celery
+            return celery.__version__
+        with QuietTest(self.sc):
+            self.assertRaises(Exception, self.sc.range(2).map(test_remote).first)
+
+        self.sc.install_packages("celery")
+        res = self.sc.range(2).map(test_remote).first
+        self.assertIsNotNone(res)
+        self.sc.uninstall_packages("celery")
+
+
 
 class TaskContextTests(PySparkTestCase):
 
