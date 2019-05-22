@@ -1168,7 +1168,7 @@ class SparkContext(object):
                         result_pkgs = curPkg
                     else:
                         result_pkgs = result_pkgs + ":" + curPkg
-            self._conf.set("spark.pyspark.virtualenv.packages", "")
+            self._conf.set("spark.pyspark.virtualenv.packages", result_pkgs)
 
         # statusTracker.getExecutorInfos() will return driver + exeuctors, so -1 here.
         num_executors = len(self._jsc.sc().statusTracker().getExecutorInfos()) - 1
