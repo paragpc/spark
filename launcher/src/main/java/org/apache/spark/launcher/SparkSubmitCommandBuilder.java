@@ -333,8 +333,8 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
       try {
         // setup virtualenv in launcher when virtualenv is enabled in pyspark shell
         Class virtualEnvClazz = Class.forName("org.apache.spark.api.python.VirtualEnvFactory");
-        Object virtualEnv = virtualEnvClazz.getConstructor(String.class, Map.class, Boolean.class)
-            .newInstance(pythonExec, conf, true);
+        Object virtualEnv = virtualEnvClazz.getConstructor(String.class, Map.class, Boolean.class,
+            Boolean.class).newInstance(pythonExec, conf, true, true);
         Method virtualEnvMethod = virtualEnvClazz.getMethod("setupVirtualEnv");
 
         pythonExec = (String) virtualEnvMethod.invoke(virtualEnv);

@@ -49,7 +49,7 @@ object PythonRunner {
 
     val virtualEnvEnabled = sparkConf.getBoolean("spark.pyspark.virtualenv.enabled", false)
     val pythonExec = if (virtualEnvEnabled) {
-      val virtualEnvFactory = new VirtualEnvFactory(globalPythonExec, sparkConf, false)
+      val virtualEnvFactory = new VirtualEnvFactory(globalPythonExec, sparkConf, false, false)
       virtualEnvFactory.setupVirtualEnv()
     } else {
       globalPythonExec

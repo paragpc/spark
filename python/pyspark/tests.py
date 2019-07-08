@@ -543,9 +543,14 @@ class CustomPythonPackageInstallationTests(PySparkTestCase):
         self.sc._conf.set("spark.pyspark.virtualenv.type", "native")
         self.sc._conf.set("spark.pyspark.python", "python")
 
-        def call_install_pypi_package():
+        def call_install_pypi_package_with_non_string_input():
             self.sc.install_pypi_package(["celery"])
-        self.assertRaises(ValueError, call_install_pypi_package)
+
+        def call_install_pypi_package_with_invalid_char_string():
+            self.sc.install_pypi_package("invalid$%#")
+
+        self.assertRaises(ValueError, call_install_pypi_package_with_non_string_input)
+        self.assertRaises(ValueError, call_install_pypi_package_with_invalid_char_string)
 
     def test_install_pypi_package_locally(self):
         self.sc._conf.set("spark.pyspark.virtualenv.enabled", "true")
@@ -594,9 +599,14 @@ class CustomPythonPackageInstallationTests(PySparkTestCase):
         self.sc._conf.set("spark.pyspark.virtualenv.type", "native")
         self.sc._conf.set("spark.pyspark.python", "python")
 
-        def call_uninstall_package():
+        def call_uninstall_package_with_non_string_input():
             self.sc.uninstall_package(["celery"])
-        self.assertRaises(ValueError, call_uninstall_package)
+
+        def call_uninstall_package_with_invalid_char_string():
+            self.sc.uninstall_package("invalid%$#")
+
+        self.assertRaises(ValueError, call_uninstall_package_with_non_string_input)
+        self.assertRaises(ValueError, call_uninstall_package_with_invalid_char_string)
 
     def test_uninstall_package(self):
         self.sc._conf.set("spark.pyspark.virtualenv.enabled", "true")

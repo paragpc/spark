@@ -74,7 +74,7 @@ class SparkContext(object):
     _next_accum_id = 0
     _active_spark_context = None
     _lock = RLock()
-    _python_includes = None  # zip and egg files that need to be added to PYTHONPATH
+    _python_includes = None   # zip and egg files that need to be added to PYTHONPATH
 
     PACKAGE_EXTENSIONS = ('.zip', '.egg', '.jar')
 
@@ -1112,6 +1112,8 @@ class SparkContext(object):
         if not isinstance(pypi_package, six.string_types):
             raise ValueError("Invalid package name: Package name must be a string")
         pypi_package = pypi_package.strip()
+        if not self._is_valid(pypi_package):
+            raise ValueError("Invalid package name: Package name must contain valid characters")
 
         def _run_pip(pypi_package, iterator):
             import sys
@@ -1148,6 +1150,8 @@ class SparkContext(object):
         if not isinstance(package, six.string_types):
             raise ValueError("Invalid package name: Package name must be a string")
         package = package.strip()
+        if not self._is_valid(package):
+            raise ValueError("Invalid package name: Package name must contain valid characters")
 
         def _run_pip(package, iterator):
             import sys
@@ -1186,6 +1190,13 @@ class SparkContext(object):
 
         from pyspark.util import CommandUtils
         CommandUtils.run_command(sys.executable + " -m pip list")
+
+    def _is_valid(self, string):
+        import re
+        char_regex = re.compile(r'[^a-zA-Z0-9.><=-_]')
+        string = char_regex.search(string)
+        return not bool(string)
+
 
 
 def _test():

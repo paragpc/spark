@@ -28,21 +28,18 @@ import com.google.common.io.Files
 import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
 
-class VirtualEnvFactory(pythonExec: String, conf: SparkConf, isDriver: Boolean)
+class VirtualEnvFactory(pythonExec: String, conf: SparkConf, isDriver: Boolean, isLauncher: Boolean)
   extends Logging {
 
   private val virtualEnvType = conf.get("spark.pyspark.virtualenv.type", "native")
   private val virtualEnvBinPath = conf.get("spark.pyspark.virtualenv.bin.path", "")
   private val initPythonPackages = conf.getOption("spark.pyspark.virtualenv.packages")
-  private var virtualEnvName: String = _
-  private var virtualPythonExec: String = _
   private val VIRTUALENV_ID = new AtomicInteger()
-  private var isLauncher: Boolean = false
 
   // used by launcher when user want to use virtualenv in pyspark shell.
-  def this(pythonExec: String, properties: JMap[String, String], isDriver: java.lang.Boolean) {
-    this(pythonExec, new SparkConf().setAll(properties.asScala), isDriver)
-    this.isLauncher = true
+  def this(pythonExec: String, properties: JMap[String, String], isDriver: java.lang.Boolean,
+      isLauncher: java.lang.Boolean) {
+    this(pythonExec, new SparkConf().setAll(properties.asScala), isDriver, isLauncher)
   }
 
   def setupVirtualEnv(): String = {
@@ -64,23 +61,22 @@ class VirtualEnvFactory(pythonExec: String, conf: SparkConf, isDriver: Boolean)
     //    finish.
     //      - driver of PySpark shell
     //      - driver of yarn-client mode
-    if (isLauncher ||
+    val virtualEnvName = if (isLauncher ||
       (isDriver && conf.get("spark.submit.deployMode") == "client")) {
       val virtualenvBasedir = Files.createTempDir()
-      virtualenvBasedir.deleteOnExit()
-      virtualEnvName = virtualenvBasedir.getAbsolutePath
+      virtualenvBasedir.getAbsolutePath
     } else {
       // isDriver && conf.get("spark.submit.deployMode") == "cluster")
       // OR Executor
       // Use the working directory
-      virtualEnvName = "virtualenv_" + conf.getAppId + "_" + VIRTUALENV_ID.getAndIncrement()
+      "virtualenv_" + conf.getAppId + "_" + VIRTUALENV_ID.getAndIncrement()
     }
 
     val createEnvCommand = List(virtualEnvBinPath, "-p", pythonExec,
       "--system-site-packages", virtualEnvName)
     execCommand(createEnvCommand)
 
-    virtualPythonExec = virtualEnvName + "/bin/python"
+    val virtualPythonExec = virtualEnvName + "/bin/python"
     // install packages
     if (initPythonPackages.isDefined) {
       val packages = initPythonPackages.get.trim
@@ -98,14 +94,14 @@ class VirtualEnvFactory(pythonExec: String, conf: SparkConf, isDriver: Boolean)
     val pb = new ProcessBuilder(commands.asJava)
     // don't inheritIO when it is used in launcher, because launcher would capture the standard
     // output to assemble the spark-submit command.
-    if(!isLauncher) {
+    if (!isLauncher) {
       pb.inheritIO();
     }
     pb.environment().put("HOME", System.getProperty("user.home"))
     val proc = pb.start()
     val exitCode = proc.waitFor()
     if (exitCode != 0) {
-      throw new RuntimeException("Fail to run command: " + commands.mkString(" "))
+      throw new RuntimeException("Failed to run command: " + commands.mkString(" "))
     }
   }
 }

@@ -219,20 +219,23 @@ For Python, the equivalent `--py-files` option can be used to distribute `.egg`,
 to executors.
 
 # VirtualEnv for PySpark
-For simple PySpark application, we can use `--py-files` to add its dependencies. While for a large PySpark application, usually you will have many dependencies which may also have transitive dependencies and even some dependencies need to be compiled first to be installed. In this case `--py-files` is not so convenient. In python world we have virtualenv to help create isolated python work environment. Spark supports virtualenv in PySpark (It is only supported for yarn and client mode for now). User can use this feature
-in 2 scenarios:
+Most non-trivial PySpark applications will usually have several transitive dependencies. PySpark currently
+supports a --py-files option to add .py, .zip or .egg files to be distributed with your application.
+However, for applications with several transitive dependencies, this is not a convenient mechanism.
+virtualenv is a Python tool to help create an isolated Python work environment. Spark supports virtualenv
+in PySpark (It is only supported for yarn and client mode for now). User can use this feature in two scenarios:
 - Interactive mode (PySpark shell or other third party Spark Notebook)
 - Batch mode (submit spark app via spark-submit)
 
 
 ## Prerequisites
 - Each node has virtualenv, python-devel installed
-- Each node has access to the repository of python packages (for downloading packages). e.g. if user wants to to install from public PyPI
+- Each node has access to the repository of Python packages (for downloading packages). e.g. if user wants to to install from public PyPI
   then each node should have access to internet. 
 
 
 ## Interactive Mode
-In interactive mode，user can install python packages at runtime instead of specifying them in while submitting spark app.
+In interactive mode，user can install Python packages at runtime instead of specifying them in while submitting spark app.
 
 {% highlight python %}
 sc.install_pypi_package("numpy")
@@ -263,7 +266,7 @@ bin/spark-submit \
 <tr>
   <td><code>spark.pyspark.virtualenv.enabled</code></td>
   <td>false</td>
-  <td>Whether to enable virtualenv. If disbaled global system python env is used.</td>
+  <td>Whether to enable virtualenv. If disabled, global system Python env is used.</td>
 </tr>
 <tr>
   <td><code>spark.pyspark.virtualenv.type</code></td>
@@ -278,7 +281,7 @@ bin/spark-submit \
 <tr>
   <td><code>spark.pyspark.virtualenv.packages</code></td>
   <td>(none)</td>
-  <td>Additional python packages need to be installed when creating virtualenv runtime./td>
+  <td>Additional Python packages need to be installed when creating virtualenv runtime./td>
 </tr>
 </table>
 

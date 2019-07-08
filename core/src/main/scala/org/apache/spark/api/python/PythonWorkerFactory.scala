@@ -81,7 +81,7 @@ private[spark] class PythonWorkerFactory(
   var lastActivity = 0L
   val virtualEnvEnabled = conf.getBoolean("spark.pyspark.virtualenv.enabled", false)
   val pythonExec = if (virtualEnvEnabled) {
-    val virtualEnvFactory = new VirtualEnvFactory(globalPythonExec, conf, false)
+    val virtualEnvFactory = new VirtualEnvFactory(globalPythonExec, conf, false, false)
     virtualEnvFactory.setupVirtualEnv()
   } else {
     globalPythonExec

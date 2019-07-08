@@ -15,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import print_function
 
 import re
 import sys
@@ -99,7 +100,7 @@ class CommandUtils(object):
         process = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         stdout, stderr = process.communicate()
         print(stdout)
-        print(stderr)
+        print(stderr, file=sys.stderr)
         return process.returncode
 
 def fail_on_stopiteration(f):
